@@ -1,0 +1,540 @@
+# Subfinder
+
+## Purpose of Subfinder
+
+- **Subfinder** uses multiple passive sources to collect publicly discoverable subdomains of a target domain.
+- In **passive enumeration**, we collect information about the target from **third-party and publicly available information sources**.
+- **Subfinder discovers subdomains; it does not validate whether the discovered hosts are currently reachable/alive.**
+
+### Subfinder vs DNSx
+
+**DNSx** is a DNS querying/resolution tool.
+
+```
+api.example.com
+       ↓
+   DNS query
+       ↓
+ A / AAAA / CNAME / etc.
+       ↓
+   DNS information
+```
+
+Think of it like this:
+
+> **Subfinder = “What hostnames can I discover?”**
+> 
+
+> **DNSx = “What does DNS tell me about these hostnames?”**
+> 
+
+In other words, DNSx can help determine **which discovered hostnames are DNS-resolvable**.
+
+---
+
+## Does Subfinder Guess Subdomains?
+
+**No.**
+
+Subfinder discovers subdomains from **publicly available/passive sources** rather than guessing them through a dictionary or brute-force technique.
+
+---
+
+# Basic Subfinder Commands
+
+### Single Domain
+
+```bash
+subfinder -d example.com
+```
+
+- `d` → specifies the target domain.
+
+### Multiple Domains
+
+```bash
+subfinder -d example.com,example.org
+```
+
+Avoid casually adding spaces between CLI arguments.
+
+### Domain List
+
+```bash
+subfinder -dL domains.txt
+```
+
+- `dL` means **Domain List** and is used to enumerate multiple domains from a file.
+
+### Save Results
+
+```bash
+subfinder -d example.com -o subs.txt
+```
+
+- `o` → saves the output to a file.
+
+### Silent Output
+
+```bash
+subfinder -d example.com -silent
+```
+
+- `silent` → produces clean output without additional informational messages.
+
+This is especially useful for:
+
+- Automation
+- Pipelines
+- Scripting
+
+You can combine them:
+
+```bash
+subfinder -d example.com -silent -o subs.txt
+```
+
+---
+
+# JSONL Output
+
+```bash
+subfinder -d example.com -oJ -o results.json
+```
+
+- `oJ` → produces **JSON Lines / JSONL-style output**.
+
+This gives you structured records that can be processed programmatically.
+
+It is especially useful for:
+
+- Python automation
+- Integrating Subfinder into other tools
+- Storing structured data
+- Building automated reconnaissance pipelines
+
+### Plain Text vs JSONL
+
+| Format | Best For |
+| --- | --- |
+| Plain text | Human-readable output |
+| JSONL | Machine-readable, structured processing |
+
+**JSONL is generally better for programmatic processing** because it can preserve structured information and is easier to parse automatically.
+
+---
+
+# Listing Available Sources
+
+```bash
+subfinder -ls
+```
+
+- `ls` → displays the available enumeration sources.
+
+---
+
+# Source Statistics
+
+```bash
+subfinder -d example.com -stats
+```
+
+- `stats` helps you understand **which sources contributed to the enumeration and how many results they provided**.
+
+This is useful when investigating:
+
+> “Which sources actually contributed to my enumeration?”
+> 
+
+---
+
+# Provider Configuration
+
+Subfinder's provider configuration file contains credentials/API keys for different sources.
+
+```
+provider-config.yaml
+```
+
+Treat this file like a **secrets file**.
+
+It may contain sensitive credentials, so **do not blindly upload or paste its entire contents to GitHub or anywhere public.**
+
+For example:
+
+- `crtsh` → does not require a key for basic use.
+- `github *` → requires credentials/token according to the current source configuration.
+
+The `*` means that the source **requires credentials/token**.
+
+Subfinder does **not** provide these credentials. You must legitimately obtain the required credentials from the respective provider and configure them in `provider-config.yaml`.
+
+Without the required credentials, you may see behavior equivalent to:
+
+```
+Source unavailable without credentials
+```
+
+---
+
+# Selecting Specific Sources
+
+```
+subfinder -d example.com -s crtsh
+```
+
+- `s` → use only the specified source(s).
+
+You can specify multiple sources:
+
+```
+subfinder -d example.com -s crtsh,commoncrawl
+```
+
+This is **extremely useful for troubleshooting**, because you can test individual sources and determine which ones are working.
+
+---
+
+# Using All Sources
+
+```
+subfinder -d example.com -all
+```
+
+- `all` → uses all available sources for enumeration.
+
+However, **don't automatically use `-all` every time.**
+
+Why?
+
+- Slower execution
+- More provider/API usage
+- Possible rate limits
+- More unnecessary requests
+- Potentially more noise in some workflows
+
+Use `-all` when **coverage is more important than speed** and the activity is authorized and within scope.
+
+---
+
+# Excluding Sources
+
+```
+subfinder -d example.com -es alienvault,zoomeyeapi
+```
+
+- `es` → excludes specified sources from the available sources.
+
+---
+
+# Source Statistics
+
+```
+subfinder -d example.com -stats
+```
+
+The purpose of `-stats` is simple:
+
+> **It shows how many subdomains were discovered by each source.**
+> 
+
+This helps answer:
+
+> “Which sources actually contributed to my enumeration?”
+> 
+
+---
+
+# JSONL + Automation
+
+```
+subfinder -d example.com -oJ -o results.json
+```
+
+- `oJ` → JSONL output.
+
+Useful when:
+
+- Processing results with Python
+- Integrating Subfinder into automation
+- Storing structured data
+- Building reconnaissance pipelines
+
+---
+
+# Source Attribution
+
+```
+subfinder -d example.com -cs
+```
+
+- `cs` → shows the **source(s) from which each discovered subdomain was obtained**.
+
+This is useful when you want to understand where a particular result came from.
+
+---
+
+# Filtering Results
+
+## `f` = Filter Out
+
+```
+subfinder -d example.com -f dev
+```
+
+This filters out results containing the specified keyword/pattern.
+
+For example, results related to `dev` can be excluded.
+
+---
+
+## `m` = Match Only
+
+Suppose you only want results related to `api`:
+
+```
+subfinder -d example.com -m api
+```
+
+- `m` → matches only results containing the specified pattern.
+
+So:
+
+> `-f` → **exclude matching results**
+> 
+
+> `-m` → **keep matching results**
+> 
+
+---
+
+# Recursive Enumeration
+
+```
+subfinder -d example.com -recursive
+```
+
+Recursive enumeration can discover deeper-level names where supported by the relevant sources.
+
+For example:
+
+```
+example.com
+├── api.example.com
+│   └── v1.api.example.com
+├── dev.example.com
+│   └── test.dev.example.com
+└── mail.example.com
+```
+
+Important distinction:
+
+```
+-all
+ ↓
+All available sources
+
+-recursive
+ ↓
+Only sources that support recursive enumeration
+```
+
+---
+
+# GitHub Personal Access Token
+
+If you want to configure a GitHub source that requires authentication, you can generate a **GitHub Personal Access Token (PAT)** and add it to Subfinder's provider configuration.
+
+### Step 1 — Generate the Token
+
+On GitHub:
+
+**Settings → Developer settings → Personal access tokens → Tokens (classic) → Generate new token**
+
+Copy the token immediately after generating it.
+
+### Step 2 — Configure Subfinder
+
+Open:
+
+```
+nano ~/.config/subfinder/provider-config.yaml
+```
+
+Find the `github` entry.
+
+Add your token inside the `github:` block using brackets:
+
+```
+github: [ghp_YourFirstGitHubTokenHere, ghp_YourSecondGitHubTokenHere]
+```
+
+Multiple tokens can be configured when supported, which can help distribute API usage and reduce the chance of hitting a single token's rate limit.
+
+Then save and exit:
+
+```
+Ctrl + O
+Enter
+Ctrl + X
+```
+
+**Important:** Never publish your real token in screenshots, GitHub repositories, tutorials, or social media posts.
+
+---
+
+# Rate Limiting
+
+### Global Rate Limit
+
+```
+subfinder -d example.com -rl 5
+```
+
+- `rl` → applies a **global rate limit**.
+
+### Source-Specific Rate Limits
+
+```
+subfinder -d example.com -rls "github=2/s,shodan=1/s"
+```
+
+- `rls` → applies **source/provider-specific rate limits**.
+
+Here:
+
+```
+GitHub → 2 requests/second
+Shodan → 1 request/second
+```
+
+### Difference
+
+```
+-rl
+ ↓
+Global rate limit
+
+-rls
+ ↓
+Provider/source-specific rate limits
+```
+
+---
+
+# `timeout` vs `max-time`
+
+### Timeout
+
+```
+subfinder -d example.com -timeout 10
+```
+
+- `timeout` controls **how long Subfinder waits for an individual request/source response** before timing out.
+
+In simple terms:
+
+> “How long should I wait for this request to respond?”
+> 
+
+Here, the timeout is **10 seconds**.
+
+### Maximum Enumeration Time
+
+```
+subfinder -d example.com -max-time 5
+```
+
+- `max-time` controls the **maximum amount of time allowed for the overall enumeration process**.
+
+In simple terms:
+
+> “How long should I allow this enumeration process to run?”
+> 
+
+So remember:
+
+```
+-timeout
+   ↓
+How long do I wait for an individual request?
+
+-max-time
+   ↓
+How long can the overall enumeration process run?
+```
+
+---
+
+# Quick Questions
+
+### Q1. You want broad coverage using all available sources, but the scan is taking too long. Name two things you could investigate or change.
+
+**Answer:**
+
+```
+-rl
+-rls
+```
+
+You can investigate global and source-specific rate limits, depending on the bottleneck and provider behavior.
+
+---
+
+### Q2. What's the difference between `rl` and `rls`?
+
+**Answer:**
+
+```
+-rl
+→ Global rate limit
+
+-rls
+→ Provider/source-specific rate limits
+```
+
+---
+
+### Q3. What's the difference between `timeout 10` and `max-time 5`?
+
+**Answer:**
+
+```
+-timeout
+→ Controls individual request/source wait behavior
+
+-max-time
+→ Controls the overall enumeration time limit
+```
+
+---
+
+## 🧠 The Mental Model You Should Remember
+
+```
+                TARGET DOMAIN
+                     │
+                     ▼
+                 SUBFINDER
+                     │
+          ┌──────────┴──────────┐
+          ▼                     ▼
+   Passive Sources         Public Data
+          │
+          ▼
+     Subdomains
+          │
+          ▼
+        DNSx
+          │
+          ▼
+   DNS Resolution
+          │
+          ▼
+     Resolvable Hosts
+```
+
+**Subfinder discovers.
+DNSx resolves.
+HTTPx probes HTTP services.**
